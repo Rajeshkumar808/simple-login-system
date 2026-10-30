@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        <div class="welcome-box">
+
+            <h1 id="welcomeMessage">Hello!</h1>
+
+            <button id="logoutButton">
+                Logout
+            </button>
+
+        </div>
+    </div>
+
+    <script>
+        const token = sessionStorage.getItem("token");
+        const savedUsername = sessionStorage.getItem("username");
+
+        // Immediately set greeting if username exists in storage
+        if (savedUsername) {
+            document.getElementById("welcomeMessage").textContent = `Hello @${savedUsername} and welcome!!`;
+        }
+
+        if (!token) {
+            window.location.replace("/");
+        } else {
+            fetch("/api/me", {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    throw new Error("Session expired");
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Fallback to update with server-verified username if available
+                const username = data.username || savedUsername;
+                document.getElementById("welcomeMessage").textContent = `Hello @${username} and welcome!!`;
+            })
+            .catch(() => {
+                sessionStorage.removeItem("token");
+                sessionStorage.removeItem("username");
+                window.location.replace("/");
+            });
+        }
+
+        document.getElementById("logoutButton")
+            .addEventListener("click", async () => {
+                try {
+                    await fetch("/api/logout", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": "Bearer " + token
+                        }
+                    });
+                } finally {
+                    sessionStorage.removeItem("token");
+                    sessionStorage.removeItem("username");
+                    window.location.replace("/");
+                }
+            });
+    </script>
+
+</body>
+</html>
